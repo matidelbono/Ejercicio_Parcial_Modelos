@@ -117,14 +117,20 @@ void inicializa(void)  /* Inicializar el Sistema */
 	transfer[Tipo_Evento] = Inicio_día;
 	transfer[Tiempo_Evento] = sim_time + tiempo_inactivo;
 
-	// Se pronostica el primer arribo de cliente
-	cont_clientes++;
-	transfer[1] = sim_time + expon(media_interarribos,arribo_cliente);
-	transfer[2] = arribo_cliente;
-	list_file(INCREASING,LIST_EVENT);
 
 }
+Rutina_inicio_día()
+	{
 
+		transfer[Tipo_Evento] = Inicio_día;
+		transfer[Tiempo_Evento] = sim_time + tiempo_inactivo;
+
+		// Se pronostica el primer arribo de cliente
+		cont_clientes++;
+		transfer[Tiempo_Evento] = sim_time + expon(media_interarribos, arribo_cliente);
+		transfer[Tipo_Evento] = arribo_cliente;
+		list_file(INCREASING, LIST_EVENT);
+	}
 
 void Rutina_arribo_cliente(void)  /* Evento Arribo */
 {
@@ -250,8 +256,19 @@ void Rutina_partida_caja(void)  /* Evento Partida */
 		}
 		  sampst(sim_time - transfer[1], Demora_cola_cajas_comunes);
 		  list_file(FIRST, Caja)
+
+		  transfer[Tiempo_Evento] = sim_time + uniform(min_cajas, max_caja_rapida, partida_caja);
+		  transfer[Tipo_Evento] = partida_caja;
+		  transfer[Caja] = 1;
+		  list_file(INCREASING, LIST_EVENT);
 	}
-	}
+}
+void Rutina_fin_dia()
+{
+	transfer[Tiempo_Evento] = sim_time + tiempo_inactivo;
+	list_file[INCREASING, LIST_EVENT]
+}
+    
 
 
 void estadisticos( void )  /* Generar Reporte de la Simulaci¢n */
@@ -292,8 +309,6 @@ void estadisticos( void )  /* Generar Reporte de la Simulaci¢n */
 	 
 	//	Porcentaje de clientes que se cambian de cola antes de ser atendidos
 	printf("\nporcentaje clientes cambiados de cola: %f \n ", transfer[1]);
-	//	Número medio de clientes en el banco*/
-}
 }
 
 
