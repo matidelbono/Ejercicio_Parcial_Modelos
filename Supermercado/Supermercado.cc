@@ -119,7 +119,7 @@ void inicializa(void)  /* Inicializar el Sistema */
 
 
 }
-Rutina_inicio_día()
+void Rutina_inicio_día(void)
 	{
 
 		transfer[Tipo_Evento] = Inicio_día;
