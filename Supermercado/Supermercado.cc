@@ -9,6 +9,7 @@
 #define Fin_día           2  /* Tipo de Evento 2: Partidas          */
 #define arribo_cliente    3
 #define partida_caja      4
+#define recorrido         5
 
 // definición colas y servidores
 #define Cola_caja_1  1 /* Lista 1: Cola  */
@@ -25,7 +26,7 @@
 
 /* Declaraci¢n de variables propias */
 bool super_abierto
-float media_interarribos, min_tiempo_recorrido, max_tiempo_recorrido,probabilidad_cliente,min_cajas_comunes, max_cajas_comunes, min_caja_rapida, max_caja_rapida, cont_clientes, tipocaja , rápida=1, comunes=2,  tiempo_activo, tiempo_inactivo, cant_días;
+float media_interarribos, min_tiempo_recorrido, max_tiempo_recorrido,min_cajas_comunes, max_cajas_comunes, min_caja_rapida, max_caja_rapida, cont_clientes, clientes_no_compran,tipocaja , rápida=1, comunes=2, probabilidad_cliente,  tiempo_activo, tiempo_inactivo, cant_días;
 int num_clientes, clientes_act, i;
 
 // Definición posiciones transfer
@@ -37,6 +38,7 @@ int num_clientes, clientes_act, i;
 void inicializa(void);
 void Rutina_inicio_día(void);
 void Rutina_fin_día(void);
+void Rutina_Recorrido(void);
 void Rutina_arribo_cliente(void);
 void Rutina_partida_caja(void);
 void estadísticos(void);
@@ -76,6 +78,9 @@ int main()  /* Main function. */
 			case Fin_día:
 				Rutina_fin_día();
 				break;
+			case recorrido:
+				Rutina_Recorrido();
+				break;
 			case arribo_cliente:
 				Rutina_arribo_cliente();
 				break;
@@ -113,9 +118,10 @@ void inicializa(void)  /* Inicializar el Sistema */
 	cont_clientes=0
 	super_abierto = false;
 	/* Se carga el primer inicio de día */
-
+	super_abierto=true
 	transfer[Tipo_Evento] = Inicio_día;
 	transfer[Tiempo_Evento] = sim_time + tiempo_inactivo;
+	list_file(INCREASING, LIST_EVENT)
 
 
 }
@@ -132,6 +138,7 @@ void Rutina_inicio_día(void)
 		list_file(INCREASING, LIST_EVENT);
 	}
 
+
 void Rutina_arribo_cliente(void)  /* Evento Arribo */
 {
 	/* Determinar pr¢ximo arribo y cargar en Lista de Eventos */
@@ -140,57 +147,72 @@ void Rutina_arribo_cliente(void)  /* Evento Arribo */
 	transfer[Tipo_Evento] = arribo_cliente;
 	list_file(INCREASING,LIST_EVENT);
 
-	/* Chequear si el Servidor est  desocupado */
-	probabilidad_cliente = lcgrand(arribo_cliente);
-	if (probabilidad_cliente <= 0.05)
+}
+void Rutina_Recorrido(void)
+{
+	transfer[Tiempo_Evento] = sim_time + uniform(min_tiempo_recorrido, max_tiempo_recorrido);
+	transfer[Tipo_Evento] = recorrido;
+	probabilidad_cliente=lcgrand(recorrido)
+	if (probabilidad_cliente <=0.05)
 		{
-			cont_no_compran++;
+		  clientes_no_compran++
 		}
 	else if (probabilidad_cliente <=0.35)
 		{
-		  if (list_size[Servidor_caja_rapida]==0 )
+		  if (list_size[Servidor_caja_rapida]==0)
 			 {
-				list_file(FIRST, Servidor_caja_rapida);
-				sampst(0, 0, Demora_cola_caja_rapida);
-				transfer[Tiempo_Evento]=sim_time+uniform(min_caja_rapida, max_caja_rapida)
-			 }
+			   list_file(FIRST, Servidor_caja_rapida);
+			   sampst(0, 0, Demora_cola_caja_rapida)
+
+			   transfer[Tiempo_Evento] = sim_time + uniform(min_caja_rapida, max_caja_rapida)
+			   transfer[Caja]=1
+			}
 		}
 	else
 	{
-		if (list_size[Servidor_caja_1] && list_size[Servidor_caja_2] == 0)
-		{
-			
-			if (list_size[Cola_caja_1]< list_size[Cola_caja_2])
-
-			/* Si está desocupado ocuparlo y generar la partida */
+		if (list_size[Servidor_caja_1]==0 && list_size[Servidor_caja_2]==0)
 			{
-				list_file(FIRST, Servidor_caja_1);
-			}
-			else
-			{
-				list_file(FIRST, Servidor_caja_2)
-			}
-			sampst(0.0, Demora_cola_cajas_comunes);
-			transfer[Tiempo_Evento] = sim_time + uniform(min_cajas_comunes, max_cajas_comunes);
-			transfer[Tipo_Evento] = partida_caja ;
-			list_file(INCREASING, LIST_EVENT);
-
+				if (list_size[Cola_caja_1] ==0)
+				{
+					if (list_size[Cola_caja_2] > 0)
+						{
+						  list_file(FIRST, Servidor_caja_1)
+						}
+				 }
+				else if (list_size[Cola_caja_2]=0])
+				{
+					if (list_size[Cola_caja_1] > 0)
+						{
+						  list_file(FIRST, Servidor_caja_2)
+						}
+				}
+			transfer[Tiempo_Evento]=sim_time+uniform(min_cajas_comunes, max_cajas_comunes)
+			transfer[Tipo_Evento] = partida_caja;
+			transfer[Caja] = 2;
+			list_file[INCREASING, LIST_EVENT]
 		}
-
 		else
 		{
-
-			/* Si el Servidor est  ocupado poner el Trabajo en Cola */
-
+			if (transfer[Caja]==1)
+				{
+					
+					list_file(LAST, Cola_caja_rapida)
+				}
+			else
+			{
+				if (list_size[Cola_caja_1] < list_size[Cola_caja_2])
+					{
+					  list_file(LAST, Cola_caja_1)
+					}
+				else
+				{
+					list_file(LAST, Cola_caja_1)
+				}
+			}
 			transfer[Tiempo_Evento] = sim_time;
-			list_file(LAST, Cola);
 		}
-
 	}
-	}
-		
-
-
+}
 void Rutina_partida_caja(void)  /* Evento Partida */
 {
 	int TipoCaja = transfer[Caja];
@@ -225,7 +247,6 @@ void Rutina_partida_caja(void)  /* Evento Partida */
 			  if (list_size[Cola_caja_2] > 0)
 				{
 				  list_remove(FIRST, Cola_caja_2);
-				  sampst(sim_time - transfer[1], Demora_cola_cajas_comunes);
 				  list_file(FIRST, Cola_caja_1);
 
 				}
@@ -237,7 +258,6 @@ void Rutina_partida_caja(void)  /* Evento Partida */
 				  if (list_size[Cola_caja_1] > 0)
 					 {
 						 list_remove(FIRST, Cola_caja_1);
-						 sampst(sim_time - transfer[1], Demora_cola_cajas_comunes);
 						 list_file(FIRST, Cola_caja_2);
 					 }
 				}
@@ -257,9 +277,9 @@ void Rutina_partida_caja(void)  /* Evento Partida */
 		  sampst(sim_time - transfer[1], Demora_cola_cajas_comunes);
 		  list_file(FIRST, Caja)
 
-		  transfer[Tiempo_Evento] = sim_time + uniform(min_cajas, max_caja_rapida, partida_caja);
+		  transfer[Tiempo_Evento] = sim_time + uniform(min_cajas_communes, max_cajas_comunes, partida_caja);
 		  transfer[Tipo_Evento] = partida_caja;
-		  transfer[Caja] = 1;
+		  transfer[Caja] = 2;
 		  list_file(INCREASING, LIST_EVENT);
 	}
 }
@@ -267,6 +287,7 @@ void Rutina_fin_dia()
 {
 	transfer[Tiempo_Evento] = sim_time + tiempo_inactivo;
 	list_file[INCREASING, LIST_EVENT]
+	event_cancel(arribo_cliente)
 }
     
 
